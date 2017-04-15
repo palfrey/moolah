@@ -62,7 +62,12 @@ def index():
         currency = currency.json()["user"]["default_currency"]
         if currency == None:
             currency = "GBP"
-        expenses = api.get("https://secure.splitwise.com/api/v3.0/get_expenses")
+        url = "https://secure.splitwise.com/api/v3.0/get_expenses"
+        if existing.last_update == None:
+            url += "?limit=0"
+        else:
+            url += "?updated_after=%s" % existing.last_update.strftime("%Y-%m-%d")
+        expenses = api.get(url)
         expenses.raise_for_status()
         wrong = []
         for expense in expenses.json()["expenses"]:
