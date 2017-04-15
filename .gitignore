@@ -1,2 +1,3 @@
 ENV/
 config.yaml
+node_modules/
