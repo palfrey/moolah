@@ -73,7 +73,7 @@ def index():
                 convert = rate.json()["rates"][expense['currency_code']]
                 original = float(expense["cost"])
                 converted = original/convert
-                #converted = round(converted,2) # round to nearest 1/100th of unit
+                converted = round(converted,2) # round to nearest 1/100th of unit
                 wrong.append({"id":expense["id"], "description": expense["description"], "when": when, "from_value":expense["cost"], "from_currency":expense['currency_code'], "to_currency":currency, "to_value":converted, "rate": convert})
                 
         return render_template('index.html', data=existing, wrong=wrong, currency=currency, **config)
@@ -143,7 +143,7 @@ def oauth_response():
 def convert_money(value, rate):
     if value == None:
         return None
-    return float(value)/rate
+    return round(float(value)/rate, 2) # nearest 100th of unit
 
 @app.route("/update", methods=["POST"])
 def update_expense():
@@ -158,17 +158,30 @@ def update_expense():
             "currency_code": request.form["currency"], 
             "cost":convert_money(expense["cost"], rate)
         }
-        print (new_data)
+        owed_total = 0
+        least_owed = most_owed = None
         for idx, user in enumerate(expense["users"]):
             new_user = {
                 "user_id": user["user_id"], 
                 "paid_share": convert_money(user["paid_share"], rate),
-                "owed_share": convert_money(user["owed_share"], rate),
-                "net_balance": convert_money(user["net_balance"], rate)
+                "owed_share": convert_money(user["owed_share"], rate)
             }
-            print(new_user)
+            owed_total += new_user["owed_share"]
+            if least_owed == None or new_data["users__array_%d__owed_share" % least_owed] > new_user["owed_share"]:
+                least_owed = idx
+            if most_owed == None or new_data["users__array_%d__owed_share" % most_owed] < new_user["owed_share"]:
+                most_owed = idx
             for key in new_user.keys():
                 new_data["users__array_%d__%s" % (idx, key)] = new_user[key]
+        if owed_total != new_data["cost"]:
+            # need to correct
+            difference = owed_total-new_data["cost"]
+            if math.fabs(round(difference,2)) != 0.01: # something odd has happened
+                raise Exception((difference, math.fabs(difference)))
+            if difference > 0:
+                new_data["users__array_%d__owed_share" % most_owed] -= difference
+            else:
+                new_data["users__array_%d__owed_share" % least_owed] -= difference
         update = api.put("https://secure.splitwise.com/api/v3.0/update_expense/%s" % request.form["id"], data=new_data)
         update.raise_for_status()
         update = update.json()
