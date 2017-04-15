@@ -1,0 +1,11 @@
+Flask
+PyYAML
+requests
+requests_oauthlib
+Flask-SQLAlchemy
+humanize
+gunicorn
+psycopg2
+
+flake8
+pip-tools
