@@ -2,6 +2,7 @@ import datetime
 import humanize
 from requests_oauthlib import OAuth1Session
 
+
 def build_models(db):
     class User(db.Model):
         id = db.Column(db.Integer, primary_key=True)
@@ -28,17 +29,19 @@ def build_models(db):
             return '<User %r>' % self.splitwise_id
 
         def authed_api(self, client_key, client_secret):
-            return OAuth1Session(client_key,
-                                client_secret=client_secret,
-                                resource_owner_key=self.resource_owner_key,
-                                resource_owner_secret=self.resource_owner_secret)
+            return OAuth1Session(
+                client_key,
+                client_secret=client_secret,
+                resource_owner_key=self.resource_owner_key,
+                resource_owner_secret=self.resource_owner_secret)
 
         def expenses_url(self):
             url = "https://secure.splitwise.com/api/v3.0/get_expenses"
-            if self.last_update == None:
+            if self.last_update is None:
                 url += "?limit=0"
             else:
-                url += "?updated_after=%s" % self.last_update.strftime("%Y-%m-%d")
+                url += "?updated_after=%s" % \
+                    self.last_update.strftime("%Y-%m-%d")
             return url
 
     try:
