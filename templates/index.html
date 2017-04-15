@@ -54,7 +54,7 @@
 								<td>{{ expense["from_value"]}} {{ expense["from_currency"]}}</td>
 								<td>{{ expense["to_value"]}} {{ expense["to_currency"]}}</td>
 								<td>
-									<form action="{{ url_for ('update_expense')}}" method="post">
+									<form action="{{ url_for ('update_expense_req')}}" method="post">
 										<input type="hidden" name="id" value="{{ expense["id"] }}" />
 										<input type="hidden" name="currency" value="{{ expense["to_currency"] }}" />
 										<input type="hidden" name="rate" value="{{ expense["rate"] }}" />

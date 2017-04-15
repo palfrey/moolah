@@ -52,35 +52,38 @@ def get_existing():
     return None
 
 
+def get_default_currency(api):
+    currency = api.get("https://secure.splitwise.com/api/v3.0/get_current_user")
+    currency.raise_for_status()
+    currency = currency.json()["user"]["default_currency"]
+    if currency == None:
+        currency = "GBP"
+    return currency
+
+def wrong_expenses(api, existing, currency):
+    expenses = api.get(existing.expenses_url())
+    expenses.raise_for_status()
+    wrong = []
+    for expense in expenses.json()["expenses"]:
+        if expense['currency_code'] != currency:
+            when = datetime.datetime.strptime(expense["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            rate = requests.get("http://api.fixer.io/%s?base=%s&symbols=%s"%(when.strftime("%Y-%m-%d"), currency, expense['currency_code']))
+            rate.raise_for_status()
+            convert = rate.json()["rates"][expense['currency_code']]
+            original = float(expense["cost"])
+            converted = original/convert
+            converted = round(converted,2) # round to nearest 1/100th of unit
+            wrong.append({"id":expense["id"], "description": expense["description"], "when": when, "from_value":expense["cost"], "from_currency":expense['currency_code'], "to_currency":currency, "to_value":converted, "rate": convert})
+    return wrong
+
+
 @app.route("/")
 def index():
     existing = get_existing()
     if existing != None:
         api = existing.authed_api(config["splitwise"]["client_id"], config["splitwise"]["client_secret"])
-        currency = api.get("https://secure.splitwise.com/api/v3.0/get_current_user")
-        currency.raise_for_status()
-        currency = currency.json()["user"]["default_currency"]
-        if currency == None:
-            currency = "GBP"
-        url = "https://secure.splitwise.com/api/v3.0/get_expenses"
-        if existing.last_update == None:
-            url += "?limit=0"
-        else:
-            url += "?updated_after=%s" % existing.last_update.strftime("%Y-%m-%d")
-        expenses = api.get(url)
-        expenses.raise_for_status()
-        wrong = []
-        for expense in expenses.json()["expenses"]:
-            if expense['currency_code'] != currency:
-                when = datetime.datetime.strptime(expense["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-                rate = requests.get("http://api.fixer.io/%s?base=%s&symbols=%s"%(when.strftime("%Y-%m-%d"), currency, expense['currency_code']))
-                rate.raise_for_status()
-                convert = rate.json()["rates"][expense['currency_code']]
-                original = float(expense["cost"])
-                converted = original/convert
-                converted = round(converted,2) # round to nearest 1/100th of unit
-                wrong.append({"id":expense["id"], "description": expense["description"], "when": when, "from_value":expense["cost"], "from_currency":expense['currency_code'], "to_currency":currency, "to_value":converted, "rate": convert})
-                
+        currency = get_default_currency(api)
+        wrong = wrong_expenses(api, existing, currency)
         return render_template('index.html', data=existing, wrong=wrong, currency=currency, **config)
     else:
         return render_template('index.html', **config)
@@ -150,47 +153,60 @@ def convert_money(value, rate):
         return None
     return round(float(value)/rate, 2) # nearest 100th of unit
 
+def update_expense(api, id, currency, rate):
+    expense = api.get("https://secure.splitwise.com/api/v3.0/get_expense/%s" % id)
+    expense.raise_for_status()
+    expense = expense.json()["expense"]
+    rate = float(rate)
+    new_data = {
+        "currency_code": currency,
+        "cost":convert_money(expense["cost"], rate)
+    }
+    owed_total = 0
+    least_owed = most_owed = None
+    for idx, user in enumerate(expense["users"]):
+        new_user = {
+            "user_id": user["user_id"],
+            "paid_share": convert_money(user["paid_share"], rate),
+            "owed_share": convert_money(user["owed_share"], rate)
+        }
+        owed_total += new_user["owed_share"]
+        if least_owed == None or new_data["users__array_%d__owed_share" % least_owed] > new_user["owed_share"]:
+            least_owed = idx
+        if most_owed == None or new_data["users__array_%d__owed_share" % most_owed] < new_user["owed_share"]:
+            most_owed = idx
+        for key in new_user.keys():
+            new_data["users__array_%d__%s" % (idx, key)] = new_user[key]
+    if owed_total != new_data["cost"]:
+        # need to correct
+        difference = owed_total-new_data["cost"]
+        if math.fabs(round(difference,2)) != 0.01: # something odd has happened
+            raise Exception((difference, math.fabs(difference)))
+        if difference > 0:
+            new_data["users__array_%d__owed_share" % most_owed] -= difference
+        else:
+            new_data["users__array_%d__owed_share" % least_owed] -= difference
+    update = api.put("https://secure.splitwise.com/api/v3.0/update_expense/%s" % id, data=new_data)
+    update.raise_for_status()
+    update = update.json()
+    if "errors" in update and update["errors"] != {}:
+        raise Exception, update
+
 @app.route("/update", methods=["POST"])
-def update_expense():
+def update_expense_req():
     existing = get_existing()
     if existing != None:
         api = existing.authed_api(config["splitwise"]["client_id"], config["splitwise"]["client_secret"])
-        expense = api.get("https://secure.splitwise.com/api/v3.0/get_expense/%s" % request.form["id"]) 
-        expense.raise_for_status()
-        expense = expense.json()["expense"]
-        rate = float(request.form["rate"])
-        new_data = {
-            "currency_code": request.form["currency"], 
-            "cost":convert_money(expense["cost"], rate)
-        }
-        owed_total = 0
-        least_owed = most_owed = None
-        for idx, user in enumerate(expense["users"]):
-            new_user = {
-                "user_id": user["user_id"], 
-                "paid_share": convert_money(user["paid_share"], rate),
-                "owed_share": convert_money(user["owed_share"], rate)
-            }
-            owed_total += new_user["owed_share"]
-            if least_owed == None or new_data["users__array_%d__owed_share" % least_owed] > new_user["owed_share"]:
-                least_owed = idx
-            if most_owed == None or new_data["users__array_%d__owed_share" % most_owed] < new_user["owed_share"]:
-                most_owed = idx
-            for key in new_user.keys():
-                new_data["users__array_%d__%s" % (idx, key)] = new_user[key]
-        if owed_total != new_data["cost"]:
-            # need to correct
-            difference = owed_total-new_data["cost"]
-            if math.fabs(round(difference,2)) != 0.01: # something odd has happened
-                raise Exception((difference, math.fabs(difference)))
-            if difference > 0:
-                new_data["users__array_%d__owed_share" % most_owed] -= difference
-            else:
-                new_data["users__array_%d__owed_share" % least_owed] -= difference
-        update = api.put("https://secure.splitwise.com/api/v3.0/update_expense/%s" % request.form["id"], data=new_data)
-        update.raise_for_status()
-        update = update.json()
-        if "errors" in update and update["errors"] != {}:
-            raise Exception, update
+        update_expense(api, request.form["id"], request.form["currency"], request.form["rate"])
         flash("Updated expense")
     return redirect(url_for('index'))
+
+if __name__ == "__main__":
+    users = User.query.all()
+    for user in users:
+        print("Updating", user)
+        api = user.authed_api(config["splitwise"]["client_id"], config["splitwise"]["client_secret"])
+        currency = get_default_currency(api)
+        wrong = wrong_expenses(api, user, currency)
+        for expense in wrong:
+            update_expense(api, expense["id"], currency, expense["rate"])

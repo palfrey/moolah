@@ -32,7 +32,14 @@ def build_models(db):
                                 client_secret=client_secret,
                                 resource_owner_key=self.resource_owner_key,
                                 resource_owner_secret=self.resource_owner_secret)
-            
+
+        def expenses_url(self):
+            url = "https://secure.splitwise.com/api/v3.0/get_expenses"
+            if self.last_update == None:
+                url += "?limit=0"
+            else:
+                url += "?updated_after=%s" % self.last_update.strftime("%Y-%m-%d")
+            return url
 
     try:
         User.query.first()
