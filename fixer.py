@@ -210,3 +210,5 @@ if __name__ == "__main__":
         wrong = wrong_expenses(api, user, currency)
         for expense in wrong:
             update_expense(api, expense["id"], currency, expense["rate"])
+        user.update()
+    db.session.commit()
