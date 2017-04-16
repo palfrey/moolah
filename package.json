@@ -4,5 +4,6 @@
 	},
 	"scripts": {
 	    "postinstall": "./node_modules/bower/bin/bower install"
-	}
+	},
+	"cacheDirectories": ["node_modules", "static/bower_components"]
 }
