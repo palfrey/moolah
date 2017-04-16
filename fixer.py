@@ -9,6 +9,7 @@ from models import build_models
 from datetime import datetime
 import math
 import logging
+import os
 
 
 def enable_request_logging():
@@ -30,7 +31,23 @@ def enable_request_logging():
 # enable_request_logging()
 
 app = Flask(__name__)
-config = yaml.safe_load(open('config.yaml', 'r'))
+if "DYNO" in os.environ:
+    app.logger.info(
+        "Found DYNO environment variable, so assuming we're in Heroku")
+    config = {
+        "app": {
+            "database_uri": os.environ["DATABASE_URL"]
+        },
+        "splitwise": {
+            "client_id": os.environ["CLIENT_ID"],
+            "client_secret": os.environ["CLIENT_SECRET"]
+        },
+        "flask": {
+            "secret_key": os.environ["FLASK_ENCRYPTION_KEY"]
+        }
+    }
+else:
+    config = yaml.safe_load(open('config.yaml', 'r'))
 
 app.secret_key = config["flask"]["secret_key"]
 app.config['SQLALCHEMY_DATABASE_URI'] = config["app"]["database_uri"]
