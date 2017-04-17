@@ -31,7 +31,7 @@
 				</p>
 			</div>
 
-			<ol>
+			<ul>
 				<li>
 					{% if not data %}
 						<form action="{{ url_for ('oauth_request')}}" method="get">
@@ -83,6 +83,7 @@
 				<li>
 					Last updated: {{ data.pretty_update() if data else "Never" }}
 				</li>
+			</ul>
 		</div>
 	</body>
 </html>
