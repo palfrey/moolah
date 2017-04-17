@@ -265,18 +265,31 @@ def update_expense_req():
     return redirect(url_for('index'))
 
 
+def update_all(user):
+    api = user.authed_api(
+        config["splitwise"]["client_id"],
+        config["splitwise"]["client_secret"])
+    currency = get_default_currency(api)
+    wrong = wrong_expenses(api, user, currency)
+    for expense in wrong:
+        if expense["rate"] is None:
+            continue
+        update_expense(api, expense["id"], currency, expense["rate"])
+    user.update()
+
+
+@app.route("/update/all", methods=["POST"])
+def update_all_req():
+    existing = get_existing()
+    if existing is not None:
+        update_all(existing)
+        flash("Updated all expenses")
+    return redirect(url_for('index'))
+
+
 if __name__ == "__main__":
     users = User.query.all()
     for user in users:
         print("Updating", user)
-        api = user.authed_api(
-            config["splitwise"]["client_id"],
-            config["splitwise"]["client_secret"])
-        currency = get_default_currency(api)
-        wrong = wrong_expenses(api, user, currency)
-        for expense in wrong:
-            if expense["rate"] is None:
-                continue
-            update_expense(api, expense["id"], currency, expense["rate"])
-        user.update()
+        update_all(user)
     db.session.commit()

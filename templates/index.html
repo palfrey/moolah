@@ -42,6 +42,11 @@
 						{% if wrong == [] %}
 							<p>All entries already in default currency ({{ currency }})</p>
 						{% else %}
+							<p>
+								<form action="{{ url_for ('update_all_req')}}" method="post">
+									<button type="submit" class="btn btn-default">Update all</button>
+								</form>
+							</p>
 							<table class="table">
 								<tr>
 									<th>Description</th>
