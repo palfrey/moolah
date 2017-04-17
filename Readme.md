@@ -3,7 +3,7 @@ Moolah
 [![Build Status](https://travis-ci.org/palfrey/moolah.svg?branch=master)](https://travis-ci.org/palfrey/moolah)
 
 Moolah is a tool for converting money in your non-default currency in your [Splitwise](https://splitwise.com/)
-account into your default currency
+account into your default currency, using the rates for that day from [fixer.io](http://fixer.io/).
 
 Local Setup
 -----------
@@ -19,12 +19,12 @@ You've now got a running version of the app at http://localhost:5000. Running `p
 Heroku Setup
 ------------
 
-There's a running instance of this at https://fixer-heroku.herokuapp.com/ but here's how I did that.
+There's a running instance of this at https://moolah-heroku.herokuapp.com/ but here's how I did that.
 
 1. Get a [Heroku](https://www.heroku.com/) account. Free ones work fine.
 2. Install the [Heroku toolbelt](https://toolbelt.heroku.com/)
-3. Goto your [dashboard](https://dashboard.heroku.com/apps/) and make a new app. Mine was called "docket-heroku" but you'll need to use another name for yours, and replace anywhere I use that.
-4. `heroku git:remote --app fixer-heroku` to make it possible to push to deploy to your new app.
+3. Goto your [dashboard](https://dashboard.heroku.com/apps/) and make a new app. Mine was called "moolah-heroku" but you'll need to use another name for yours, and replace anywhere I use that.
+4. `heroku git:remote --app moolah-heroku` to make it possible to push to deploy to your new app.
 5. We're using multiple buildpacks, both the Python (backend) and Node.js (assets). Just doing `heroku buildpacks:add --index 1 heroku/nodejs` should get you configured correctly, but for reference the result of `heroku buildpacks` should say (and if it doesn't, read [the docs](https://devcenter.heroku.com/articles/using-multiple-buildpacks-for-an-app))
    1. heroku/nodejs
    2. heroku/python
