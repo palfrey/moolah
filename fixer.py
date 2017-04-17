@@ -87,16 +87,23 @@ def wrong_expenses(api, existing, currency):
         if expense['currency_code'] != currency:
             when = datetime.strptime(
                 expense["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+            original = float(expense["cost"])
             rate = requests.get(
                 "http://api.fixer.io/%s?base=%s&symbols=%s" %
                 (when.strftime("%Y-%m-%d"),
                     currency,
                     expense['currency_code']))
             rate.raise_for_status()
-            convert = rate.json()["rates"][expense['currency_code']]
-            original = float(expense["cost"])
-            converted = original/convert
-            converted = round(converted, 2)  # round to nearest 1/100th of unit
+            rate = rate.json()
+
+            if expense['currency_code'] not in rate["rates"]:
+                convert = None
+                converted = "Can't convert %s" % expense['currency_code']
+            else:
+                convert = rate["rates"][expense['currency_code']]
+                converted = original/convert
+                # round to nearest 1/100th of unit
+                converted = round(converted, 2)
             wrong.append({
                 "id": expense["id"],
                 "description": expense["description"],
@@ -268,6 +275,8 @@ if __name__ == "__main__":
         currency = get_default_currency(api)
         wrong = wrong_expenses(api, user, currency)
         for expense in wrong:
+            if expense["rate"] is None:
+                continue
             update_expense(api, expense["id"], currency, expense["rate"])
         user.update()
     db.session.commit()
