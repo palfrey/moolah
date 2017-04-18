@@ -25,9 +25,12 @@ There's a running instance of this at https://moolah-heroku.herokuapp.com/ but h
 2. Install the [Heroku toolbelt](https://toolbelt.heroku.com/)
 3. Goto your [dashboard](https://dashboard.heroku.com/apps/) and make a new app. Mine was called "moolah-heroku" but you'll need to use another name for yours, and replace anywhere I use that.
 4. `heroku git:remote --app moolah-heroku` to make it possible to push to deploy to your new app.
-5. We're using multiple buildpacks, both the Python (backend) and Node.js (assets). Just doing `heroku buildpacks:add --index 1 heroku/nodejs` should get you configured correctly, but for reference the result of `heroku buildpacks` should say (and if it doesn't, read [the docs](https://devcenter.heroku.com/articles/using-multiple-buildpacks-for-an-app))
-   1. heroku/nodejs
-   2. heroku/python
+5. We're using multiple buildpacks, both the Python (backend) and Node.js (assets). You'll need to do the following:
+    1. `heroku buildpacks:add --index 1 heroku/nodejs`
+    2. `heroku buildpacks:add --index 2 heroku/python`
+    3. `heroku buildpacks` should now say (and if it doesn't, read [the docs](https://devcenter.heroku.com/articles/using-multiple-buildpacks-for-an-app))
+        1. heroku/nodejs
+            2. heroku/python
 6. Add the [PostgreSQL addon](https://elements.heroku.com/addons/heroku-postgresql)
 7. Go into the settings for your app and set the following config variables:
    * CLIENT_ID/CLIENT_SECRET - Splitwise app configured as per above, but with your Heroku URL, not localhost
