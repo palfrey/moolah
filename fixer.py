@@ -49,6 +49,12 @@ if "DYNO" in os.environ:
 else:
     config = yaml.safe_load(open('config.yaml', 'r'))
 
+
+@app.before_request
+def make_session_permanent():
+    session.permanent = True
+
+
 app.secret_key = config["flask"]["secret_key"]
 app.config['SQLALCHEMY_DATABASE_URI'] = config["app"]["database_uri"]
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
