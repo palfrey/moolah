@@ -6,7 +6,7 @@ from requests_oauthlib import OAuth1Session
 def build_models(db):
     class User(db.Model):
         id = db.Column(db.Integer, primary_key=True)
-        splitwise_id = db.Column(db.Integer)
+        splitwise_id = db.Column(db.Integer, unique=True)
         splitwise_access_token = db.Column(db.String(40), unique=True)
         resource_owner_key = db.Column(db.String(40), unique=True)
         resource_owner_secret = db.Column(db.String(40), unique=True)

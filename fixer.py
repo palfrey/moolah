@@ -193,6 +193,11 @@ def oauth_response():
     r = splitwise.get(url)
     r.raise_for_status()
     data = r.json()
+    other_existing = User.query.filter_by(
+            splitwise_id=data["token"]["user_id"]).first()
+    if other_existing is not None and existing.id != other_existing.id:
+        db.session.delete(existing)
+        existing = other_existing
     existing.splitwise_id = data["token"]["user_id"]
     existing.resource_owner_key = resource_owner_key
     existing.resource_owner_secret = resource_owner_secret
