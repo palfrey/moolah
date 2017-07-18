@@ -6,6 +6,7 @@ Flask-SQLAlchemy
 humanize
 gunicorn
 psycopg2
+Flask-Migrate
 
 flake8
 pip-tools

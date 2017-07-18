@@ -43,8 +43,4 @@ def build_models(db):
                     self.last_update.strftime("%Y-%m-%d")
             return url
 
-    try:
-        User.query.first()
-    except:  # Assume that failure means tables not created
-        db.create_all()
     return {"User": User}

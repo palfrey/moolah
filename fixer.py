@@ -5,6 +5,7 @@ import yaml
 from flask import (Flask, render_template, url_for,
                    request, session, redirect, flash)
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from models import build_models
 from datetime import datetime
 import math
@@ -59,6 +60,7 @@ app.secret_key = config["flask"]["secret_key"]
 app.config['SQLALCHEMY_DATABASE_URI'] = config["app"]["database_uri"]
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 models = build_models(db)
 User = models["User"]
 
