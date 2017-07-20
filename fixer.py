@@ -5,7 +5,7 @@ import yaml
 from flask import (Flask, render_template, url_for,
                    request, session, redirect, flash)
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+from flask_migrate import Migrate, upgrade
 from models import build_models
 from datetime import datetime
 import math
@@ -50,6 +50,10 @@ if "DYNO" in os.environ:
 else:
     config = yaml.safe_load(open('config.yaml', 'r'))
 
+@app.before_first_request
+def initial_setup():
+    with app.app_context():
+        upgrade()
 
 @app.before_request
 def make_session_permanent():
