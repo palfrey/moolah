@@ -58,10 +58,6 @@ def build_models(db):
             return comments.json()["comments"]
 
         def add_comment(self, api, text):
-            url = "https://secure.splitwise.com/api/v3.0/get_comments?expense_id=%d" % self.id
-            comments = api.get(url)
-            comments.raise_for_status()
-            original = comments.json()["comments"]
             new_c = {"content": text, "expense_id": self.id}
             url = "https://secure.splitwise.com/api/v3.0/create_comment"
             add = api.post(url, data=new_c)
