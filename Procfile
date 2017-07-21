@@ -1,1 +1,1 @@
-web: gunicorn fixer:app --log-file -
+web: gunicorn fixer:app --log-file - --log-level DEBUG
