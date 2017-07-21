@@ -135,10 +135,14 @@ def wrong_expenses(api, existing, currency):
                     if info["updated_for"] != expense["id"]:
                         print("Update match fail", info)
                         raise Exception
+                    print("write field")
                     existing.original_currency = info["original_currency"]
                     existing.original_value = info["original_value"]
+                    print("end write field")
 
+                print("commit begin")
                 db.session.commit()
+                print("commit end")
         print("got comments", expense["id"])
         if expense['currency_code'] != currency:
             when = datetime.strptime(
