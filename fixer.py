@@ -349,6 +349,9 @@ def update_all_req():
 if __name__ == "__main__":
     users = User.query.all()
     for user in users:
+        if user.splitwise_id is None:
+            print("No splitwise id for", user)
+            continue
         print("Updating", user)
         update_all(user)
     db.session.commit()
