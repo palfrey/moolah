@@ -12,6 +12,7 @@ import math
 import logging
 import os
 import json
+import sys
 
 
 def enable_request_logging():
@@ -29,8 +30,6 @@ def enable_request_logging():
     requests_log.setLevel(logging.DEBUG)
     requests_log.propagate = True
 
-
-# enable_request_logging()
 
 app = Flask(__name__)
 if "DYNO" in os.environ:
@@ -67,6 +66,10 @@ app.secret_key = config["flask"]["secret_key"]
 app.config['SQLALCHEMY_DATABASE_URI'] = config["app"]["database_uri"]
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = os.environ.get('DEBUG', False)
+if app.config["DEBUG"]:
+    app.logger.addHandler(logging.StreamHandler(sys.stdout))
+    app.logger.setLevel(logging.ERROR)
+    enable_request_logging()
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 models = build_models(db)
