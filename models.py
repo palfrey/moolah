@@ -46,8 +46,8 @@ def build_models(db):
     class Expense(db.Model):
         id = db.Column(db.Integer, primary_key=True)
         last_update = db.Column(db.DateTime)
-        original_currency = db.Column(db.Integer)
-        original_value = db.Column(db.Integer)
+        original_currency = db.Column(db.String)
+        original_value = db.Column(db.Float)
 
         @staticmethod
         def get_comments(api, id):
