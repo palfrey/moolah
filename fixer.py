@@ -51,10 +51,12 @@ if "DYNO" in os.environ:
 else:
     config = yaml.safe_load(open('config.yaml', 'r'))
 
+
 @app.before_first_request
 def initial_setup():
     with app.app_context():
         upgrade()
+
 
 @app.before_request
 def make_session_permanent():
@@ -69,6 +71,7 @@ migrate = Migrate(app, db)
 models = build_models(db)
 User = models["User"]
 Expense = models["Expense"]
+
 
 def get_existing():
     if "splitwise_id" in session:
@@ -99,12 +102,13 @@ def wrong_expenses(api, existing, currency):
     for expense in expenses.json()["expenses"]:
         if expense["comments_count"] > 0:
             existing = Expense.query.filter_by(id=expense["id"]).first()
-            when = datetime.strptime(expense["updated_at"], "%Y-%m-%dT%H:%M:%SZ")
-            if existing == None or when > existing.last_update:
+            when = datetime.strptime(
+                expense["updated_at"], "%Y-%m-%dT%H:%M:%SZ")
+            if existing is None or when > existing.last_update:
                 print("get comment", expense["id"])
                 comments = Expense.get_comments(api, expense["id"])
                 info = None
-                if existing == None:
+                if existing is None:
                     existing = Expense(
                         id=expense["id"],
                         last_update=when,
@@ -112,15 +116,15 @@ def wrong_expenses(api, existing, currency):
                         original_value=expense["cost"])
                     db.session.add(existing)
                 else:
-                    existing.last_update=when
+                    existing.last_update = when
                 for comment in comments[::-1]:
-                    if comment["deleted_at"] != None:
+                    if comment["deleted_at"] is not None:
                         continue
                     try:
                         info = json.loads(comment["content"])
                     except ValueError:
                         pass
-                if info != None:
+                if info is not None:
                     if info["updated_for"] != expense["id"]:
                         raise Exception
                     existing.original_currency = info["original_currency"]

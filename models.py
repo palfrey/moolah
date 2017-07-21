@@ -1,7 +1,6 @@
 import datetime
 import humanize
 from requests_oauthlib import OAuth1Session
-import json
 
 
 def build_models(db):
@@ -52,7 +51,8 @@ def build_models(db):
 
         @staticmethod
         def get_comments(api, id):
-            url = "https://secure.splitwise.com/api/v3.0/get_comments?expense_id=%d" % id
+            url = "https://secure.splitwise.com/api/v3.0/" + \
+                  "get_comments?expense_id=%d" % id
             comments = api.get(url)
             comments.raise_for_status()
             return comments.json()["comments"]
