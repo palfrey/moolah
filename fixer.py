@@ -68,7 +68,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['DEBUG'] = os.environ.get('DEBUG', False)
 if app.config["DEBUG"]:
     app.logger.addHandler(logging.StreamHandler(sys.stdout))
-    app.logger.setLevel(logging.ERROR)
+    app.logger.setLevel(logging.DEBUG)
     enable_request_logging()
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
