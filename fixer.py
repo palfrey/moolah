@@ -110,7 +110,9 @@ def wrong_expenses(api, existing, currency):
                 expense["updated_at"], "%Y-%m-%dT%H:%M:%SZ")
             if existing is None or when > existing.last_update:
                 print("get comment", expense["id"])
+                print("expense", expense)
                 comments = Expense.get_comments(api, expense["id"])
+                print("comments", comments)
                 info = None
                 if existing is None:
                     existing = Expense(
@@ -126,15 +128,18 @@ def wrong_expenses(api, existing, currency):
                         continue
                     try:
                         info = json.loads(comment["content"])
+                        print("info", info)
                     except ValueError:
                         pass
                 if info is not None:
                     if info["updated_for"] != expense["id"]:
+                        print("Update match fail", info)
                         raise Exception
                     existing.original_currency = info["original_currency"]
                     existing.original_value = info["original_value"]
 
                 db.session.commit()
+        print("got comments", expense["id"])
         if expense['currency_code'] != currency:
             when = datetime.strptime(
                 expense["created_at"], "%Y-%m-%dT%H:%M:%SZ")
