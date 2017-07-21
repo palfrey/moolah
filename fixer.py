@@ -70,6 +70,8 @@ if app.config["DEBUG"]:
     app.logger.addHandler(logging.StreamHandler(sys.stdout))
     app.logger.setLevel(logging.DEBUG)
     enable_request_logging()
+    app.config["SQLALCHEMY_ECHO"] = True
+    logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 models = build_models(db)
