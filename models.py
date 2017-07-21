@@ -1,6 +1,7 @@
 import datetime
 import humanize
 from requests_oauthlib import OAuth1Session
+import json
 
 
 def build_models(db):
@@ -43,4 +44,28 @@ def build_models(db):
                     self.last_update.strftime("%Y-%m-%d")
             return url
 
-    return {"User": User}
+    class Expense(db.Model):
+        id = db.Column(db.Integer, primary_key=True)
+        last_update = db.Column(db.DateTime)
+        original_currency = db.Column(db.Integer)
+        original_value = db.Column(db.Integer)
+
+        @staticmethod
+        def get_comments(api, id):
+            url = "https://secure.splitwise.com/api/v3.0/get_comments?expense_id=%d" % id
+            comments = api.get(url)
+            comments.raise_for_status()
+            return comments.json()["comments"]
+
+        def add_comment(self, api, text):
+            url = "https://secure.splitwise.com/api/v3.0/get_comments?expense_id=%d" % self.id
+            comments = api.get(url)
+            comments.raise_for_status()
+            original = comments.json()["comments"]
+            new_c = {"content": text, "expense_id": self.id}
+            url = "https://secure.splitwise.com/api/v3.0/create_comment"
+            add = api.post(url, data=new_c)
+            add.raise_for_status()
+            return add.json()
+
+    return {"User": User, "Expense": Expense}

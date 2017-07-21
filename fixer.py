@@ -11,6 +11,7 @@ from datetime import datetime
 import math
 import logging
 import os
+import json
 
 
 def enable_request_logging():
@@ -67,7 +68,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 models = build_models(db)
 User = models["User"]
-
+Expense = models["Expense"]
 
 def get_existing():
     if "splitwise_id" in session:
@@ -96,6 +97,36 @@ def wrong_expenses(api, existing, currency):
     expenses.raise_for_status()
     wrong = []
     for expense in expenses.json()["expenses"]:
+        if expense["comments_count"] > 0:
+            existing = Expense.query.filter_by(id=expense["id"]).first()
+            when = datetime.strptime(expense["updated_at"], "%Y-%m-%dT%H:%M:%SZ")
+            if existing == None or when > existing.last_update:
+                print("get comment", expense["id"])
+                comments = Expense.get_comments(api, expense["id"])
+                info = None
+                if existing == None:
+                    existing = Expense(
+                        id=expense["id"],
+                        last_update=when,
+                        original_currency=expense["currency_code"],
+                        original_value=expense["cost"])
+                    db.session.add(existing)
+                else:
+                    existing.last_update=when
+                for comment in comments[::-1]:
+                    if comment["deleted_at"] != None:
+                        continue
+                    try:
+                        info = json.loads(comment["content"])
+                    except ValueError:
+                        pass
+                if info != None:
+                    if info["updated_for"] != expense["id"]:
+                        raise Exception
+                    existing.original_currency = info["original_currency"]
+                    existing.original_value = info["original_value"]
+
+                db.session.commit()
         if expense['currency_code'] != currency:
             when = datetime.strptime(
                 expense["created_at"], "%Y-%m-%dT%H:%M:%SZ")
@@ -228,6 +259,13 @@ def update_expense(api, id, currency, rate):
         "currency_code": currency,
         "cost": convert_money(expense["cost"], rate)
     }
+    expense_obj = Expense.query.filter_by(id=id).first()
+    expense_obj.add_comment(api, json.dumps(
+        {
+            "original_currency": expense["currency_code"],
+            "original_value": expense["cost"],
+            "updated_for": expense["id"]
+        }))
     owed_total = 0
     least_owed = most_owed = None
     for idx, user in enumerate(expense["users"]):
