@@ -66,6 +66,7 @@ def make_session_permanent():
 app.secret_key = config["flask"]["secret_key"]
 app.config['SQLALCHEMY_DATABASE_URI'] = config["app"]["database_uri"]
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['DEBUG'] = os.environ.get('DEBUG', False)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 models = build_models(db)
