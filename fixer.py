@@ -146,7 +146,9 @@ def wrong_expenses(api, existing, currency):
         else:
             currency_code = expense_obj.original_currency
             original = expense_obj.original_value
-        if expense['currency_code'] != currency or (expense_obj is not None and expense_obj.updated_for != expense['id']):
+        if expense['currency_code'] != currency or \
+                (expense_obj is not None and
+                    expense_obj.updated_for != expense['id']):
             when = datetime.strptime(
                 expense["created_at"], "%Y-%m-%dT%H:%M:%SZ")
             rate = requests.get(
@@ -295,8 +297,10 @@ def update_expense(api, id, currency, rate):
     for idx, user in enumerate(expense["users"]):
         new_user = {
             "user_id": user["user_id"],
-            "paid_share": convert_money(convert_money(user["paid_share"], 1.0/original_rate), rate),
-            "owed_share": convert_money(convert_money(user["owed_share"], 1.0/original_rate), rate)
+            "paid_share": convert_money(
+                convert_money(user["paid_share"], 1.0/original_rate), rate),
+            "owed_share": convert_money(
+                convert_money(user["owed_share"], 1.0/original_rate), rate)
         }
         owed_total += new_user["owed_share"]
         if least_owed is None or \

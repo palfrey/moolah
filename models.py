@@ -69,7 +69,8 @@ def build_models(db):
 
         @staticmethod
         def delete_comment(api, id):
-            url = "https://secure.splitwise.com/api/v3.0/delete_comment/%d" % id
+            url = "https://secure.splitwise.com/api/v3.0/" + \
+                "delete_comment/%d" % id
             add = api.post(url)
             add.raise_for_status()
 
