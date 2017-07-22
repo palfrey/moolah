@@ -17,7 +17,10 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('expense', sa.Column('updated_for', sa.Integer(), nullable=False, server_default=sa.text("id")))
+    with op.batch_alter_table('expense') as batch_op:
+        batch_op.add_column(sa.Column('updated_for', sa.Integer(), nullable=True))
+        batch_op.get_bind().execute("update expense set updated_for=id")
+        batch_op.alter_column('updated_for', nullable=False)
 
 
 def downgrade():
