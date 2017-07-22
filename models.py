@@ -48,6 +48,9 @@ def build_models(db):
         last_update = db.Column(db.DateTime)
         original_currency = db.Column(db.String)
         original_value = db.Column(db.Float)
+        updated_for = db.Column(db.Integer, nullable=False)
+        comment_id = db.Column(db.Integer, nullable=True)
+        original_rate = db.Column(db.Float, nullable=True)
 
         @staticmethod
         def get_comments(api, id):
@@ -63,5 +66,11 @@ def build_models(db):
             add = api.post(url, data=new_c)
             add.raise_for_status()
             return add.json()
+
+        @staticmethod
+        def delete_comment(api, id):
+            url = "https://secure.splitwise.com/api/v3.0/delete_comment/%d" % id
+            add = api.post(url)
+            add.raise_for_status()
 
     return {"User": User, "Expense": Expense}

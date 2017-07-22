@@ -106,53 +106,62 @@ def wrong_expenses(api, existing, currency):
     expenses.raise_for_status()
     wrong = []
     for expense in expenses.json()["expenses"]:
+        expense_obj = Expense.query.filter_by(id=expense["id"]).first()
         if expense["comments_count"] > 0:
-            existing = Expense.query.filter_by(id=expense["id"]).first()
             when = datetime.strptime(
                 expense["updated_at"], "%Y-%m-%dT%H:%M:%SZ")
-            if existing is None or when > existing.last_update:
+            if expense_obj is None or when > expense_obj.last_update:
                 comments = Expense.get_comments(api, expense["id"])
                 info = None
-                if existing is None:
-                    existing = Expense(
+                if expense_obj is None:
+                    expense_obj = Expense(
                         id=expense["id"],
                         last_update=when,
                         original_currency=expense["currency_code"],
-                        original_value=expense["cost"])
-                    db.session.add(existing)
+                        original_value=expense["cost"],
+                        updated_for=expense["id"])
+                    db.session.add(expense_obj)
                 else:
-                    existing.last_update = when
+                    expense_obj.last_update = when
+                comment_id = None
                 for comment in comments[::-1]:
                     if comment["deleted_at"] is not None:
                         continue
                     try:
                         info = json.loads(comment["content"])
+                        comment_id = comment["id"]
                     except ValueError:
                         pass
                 if info is not None:
-                    if info["updated_for"] != expense["id"]:
-                        raise Exception("Update match fail", info)
-                    existing.original_currency = info["original_currency"]
-                    existing.original_value = info["original_value"]
+                    expense_obj.comment_id = comment_id
+                    expense_obj.updated_for = info["updated_for"]
+                    expense_obj.original_currency = info["original_currency"]
+                    expense_obj.original_value = info["original_value"]
+                    expense_obj.original_rate = info["conversion_rate"]
 
                 db.session.commit()
-        if expense['currency_code'] != currency:
+        if expense_obj is None:
+            currency_code = expense['currency_code']
+            original = float(expense["cost"])
+        else:
+            currency_code = expense_obj.original_currency
+            original = expense_obj.original_value
+        if expense['currency_code'] != currency or (expense_obj is not None and expense_obj.updated_for != expense['id']):
             when = datetime.strptime(
                 expense["created_at"], "%Y-%m-%dT%H:%M:%SZ")
-            original = float(expense["cost"])
             rate = requests.get(
                 "http://api.fixer.io/%s?base=%s&symbols=%s" %
                 (when.strftime("%Y-%m-%d"),
                     currency,
-                    expense['currency_code']))
+                    currency_code))
             rate.raise_for_status()
             rate = rate.json()
 
-            if expense['currency_code'] not in rate["rates"]:
+            if currency_code not in rate["rates"]:
                 convert = None
-                converted = "Can't convert %s" % expense['currency_code']
+                converted = "Can't convert %s" % currency_code
             else:
-                convert = rate["rates"][expense['currency_code']]
+                convert = rate["rates"][currency_code]
                 converted = original/convert
                 # round to nearest 1/100th of unit
                 converted = round(converted, 2)
@@ -160,8 +169,8 @@ def wrong_expenses(api, existing, currency):
                 "id": expense["id"],
                 "description": expense["description"],
                 "when": when,
-                "from_value": expense["cost"],
-                "from_currency": expense['currency_code'],
+                "from_value": str(original),
+                "from_currency": currency_code,
                 "to_currency": currency,
                 "to_value": converted,
                 "rate": convert})
@@ -264,24 +273,30 @@ def update_expense(api, id, currency, rate):
     expense.raise_for_status()
     expense = expense.json()["expense"]
     rate = float(rate)
+    expense_obj = Expense.query.filter_by(id=id).first()
     new_data = {
         "currency_code": currency,
-        "cost": convert_money(expense["cost"], rate)
+        "cost": convert_money(expense_obj.original_value, rate)
     }
-    expense_obj = Expense.query.filter_by(id=id).first()
+    if expense_obj.comment_id is not None:
+        Expense.delete_comment(api, expense_obj.comment_id)
     expense_obj.add_comment(api, json.dumps(
         {
-            "original_currency": expense["currency_code"],
-            "original_value": expense["cost"],
-            "updated_for": expense["id"]
+            "original_currency": expense_obj.original_currency,
+            "original_value": expense_obj.original_value,
+            "updated_for": id,
+            "conversion_rate": rate
         }))
     owed_total = 0
     least_owed = most_owed = None
+    original_rate = expense_obj.original_rate
+    if original_rate is None:
+        original_rate = 1.0
     for idx, user in enumerate(expense["users"]):
         new_user = {
             "user_id": user["user_id"],
-            "paid_share": convert_money(user["paid_share"], rate),
-            "owed_share": convert_money(user["owed_share"], rate)
+            "paid_share": convert_money(convert_money(user["paid_share"], 1.0/original_rate), rate),
+            "owed_share": convert_money(convert_money(user["owed_share"], 1.0/original_rate), rate)
         }
         owed_total += new_user["owed_share"]
         if least_owed is None or \
@@ -299,7 +314,7 @@ def update_expense(api, id, currency, rate):
         difference = owed_total-new_data["cost"]
         if math.fabs(round(difference, 2)) != 0.01:
             # something odd has happened
-            raise Exception((difference, math.fabs(difference)))
+            raise Exception((difference, math.fabs(difference), new_data))
         if difference > 0:
             new_data["users__array_%d__owed_share" % most_owed] -= difference
         else:
