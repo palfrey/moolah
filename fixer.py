@@ -110,7 +110,9 @@ def wrong_expenses(api, existing, currency):
         if expense["comments_count"] > 0:
             when = datetime.strptime(
                 expense["updated_at"], "%Y-%m-%dT%H:%M:%SZ")
-            if expense_obj is None or when > expense_obj.last_update:
+            if expense_obj is None \
+                    or expense_obj.last_update is None \
+                    or when > expense_obj.last_update:
                 comments = Expense.get_comments(api, expense["id"])
                 info = None
                 if expense_obj is None:
@@ -276,12 +278,20 @@ def update_expense(api, id, currency, rate):
     expense = expense.json()["expense"]
     rate = float(rate)
     expense_obj = Expense.query.filter_by(id=id).first()
+    if expense_obj is not None and expense_obj.comment_id is not None:
+        Expense.delete_comment(api, expense_obj.comment_id)
+    if expense_obj is None:
+        expense_obj = Expense(
+            id=id,
+            original_value=float(expense["cost"]),
+            original_currency=currency,
+            updated_for=id)
+        db.session.add(expense_obj)
+        db.session.commit()
     new_data = {
         "currency_code": currency,
         "cost": convert_money(expense_obj.original_value, rate)
     }
-    if expense_obj.comment_id is not None:
-        Expense.delete_comment(api, expense_obj.comment_id)
     expense_obj.add_comment(api, json.dumps(
         {
             "original_currency": expense_obj.original_currency,
