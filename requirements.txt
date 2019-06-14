@@ -23,7 +23,7 @@ markupsafe==1.1.1         # via jinja2, mako
 mccabe==0.6.1             # via flake8
 oauthlib==3.0.1           # via requests-oauthlib
 pip-tools==3.8.0
-psycopg2==2.8.2
+psycopg2==2.8.3
 pycodestyle==2.5.0        # via flake8
 pyflakes==2.1.1           # via flake8
 python-dateutil==2.8.0    # via alembic
